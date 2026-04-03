@@ -14,7 +14,7 @@ pub fn render(frame: &mut Frame, area: Rect, confirm: &ConfirmState) {
     let text = vec![
         Line::raw(confirm.message.clone()),
         Line::raw(""),
-        Line::raw("Enter to quit, Esc to cancel"),
+        Line::raw("Enter to confirm, Esc to cancel"),
     ];
     frame.render_widget(
         Paragraph::new(text).block(titled_block(&confirm.title)),

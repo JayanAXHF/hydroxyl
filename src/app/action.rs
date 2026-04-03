@@ -53,6 +53,7 @@ pub enum PlayerField {
 pub enum Action {
     NextTab,
     PreviousTab,
+    CloseActiveTab,
     FocusNext,
     MoveUp,
     MoveDown,

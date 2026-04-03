@@ -12,7 +12,7 @@ use crate::{
         document::Document,
         message::Message,
         router::action_from_key,
-        state::{AppState, ConfirmState, FocusArea, InputState},
+        state::{AppState, ConfirmAction, ConfirmState, FocusArea, InputState},
         tab::TabKind,
     },
     cli::{args::Cli, targets::resolve},
@@ -77,13 +77,7 @@ pub fn run(launch: LaunchConfig) -> Result<()> {
         if event::poll(Duration::from_millis(100))? {
             if let Event::Key(key) = event::read()? {
                 if runtime.state.confirm.is_some() {
-                    match key.code {
-                        crossterm::event::KeyCode::Enter => runtime.state.should_quit = true,
-                        crossterm::event::KeyCode::Esc | crossterm::event::KeyCode::Char('n') => {
-                            runtime.state.confirm = None
-                        }
-                        _ => {}
-                    }
+                    runtime.handle_confirm_key(key)?;
                     continue;
                 }
 
@@ -166,6 +160,7 @@ impl Runtime {
             Action::Noop => {}
             Action::NextTab => self.next_tab(),
             Action::PreviousTab => self.previous_tab(),
+            Action::CloseActiveTab => self.close_active_tab()?,
             Action::FocusNext => self.focus_next(),
             Action::MoveUp => self.move_vertical(-1),
             Action::MoveDown => self.move_vertical(1),
@@ -191,6 +186,31 @@ impl Runtime {
                 }
             }
             Action::OpenSelected => self.open_selected()?,
+        }
+
+        Ok(())
+    }
+
+    fn handle_confirm_key(&mut self, key: crossterm::event::KeyEvent) -> Result<()> {
+        match key.code {
+            crossterm::event::KeyCode::Enter => self.confirm_pending_action()?,
+            crossterm::event::KeyCode::Esc | crossterm::event::KeyCode::Char('n') => {
+                self.state.confirm = None
+            }
+            _ => {}
+        }
+
+        Ok(())
+    }
+
+    fn confirm_pending_action(&mut self) -> Result<()> {
+        let Some(confirm) = self.state.confirm.take() else {
+            return Ok(());
+        };
+
+        match confirm.action {
+            ConfirmAction::Quit => self.state.should_quit = true,
+            ConfirmAction::CloseTab(document_id) => self.close_document(document_id)?,
         }
 
         Ok(())
@@ -487,10 +507,68 @@ impl Runtime {
             self.state.confirm = Some(ConfirmState {
                 title: "Unsaved changes".to_owned(),
                 message: "There are unsaved changes. Quit anyway?".to_owned(),
+                action: ConfirmAction::Quit,
             });
         } else {
             self.state.should_quit = true;
         }
+    }
+
+    fn close_active_tab(&mut self) -> Result<()> {
+        let Some(document) = self.state.active_document() else {
+            return Ok(());
+        };
+
+        let document_id = document.id();
+        if document.is_dirty() {
+            self.state.confirm = Some(ConfirmState {
+                title: "Close tab".to_owned(),
+                message: format!("Close {} without saving?", document.title()),
+                action: ConfirmAction::CloseTab(document_id),
+            });
+            return Ok(());
+        }
+
+        self.close_document(document_id)
+    }
+
+    fn close_document(&mut self, document_id: crate::app::tab_id::DocumentId) -> Result<()> {
+        let Some(tab_index) = self
+            .state
+            .tabs
+            .iter()
+            .position(|tab| tab_document_id(&tab.kind) == document_id)
+        else {
+            return Ok(());
+        };
+
+        self.state.tabs.remove(tab_index);
+        if let Some(document_index) = self
+            .state
+            .documents
+            .iter()
+            .position(|document| document.id() == document_id)
+        {
+            self.state.documents.remove(document_index);
+        }
+
+        self.state.input = None;
+        self.state.confirm = None;
+
+        if self.state.tabs.is_empty() {
+            let (document, tab) = self.documents.create_home_tab();
+            self.state.documents.push(document);
+            self.state.tabs.push(tab);
+            self.state.active_tab = 0;
+        } else if self.state.active_tab >= self.state.tabs.len() {
+            self.state.active_tab = self.state.tabs.len() - 1;
+        } else if tab_index < self.state.active_tab {
+            self.state.active_tab -= 1;
+        }
+
+        self.update_focus_for_active_tab();
+        self.request_online_profiles_for_active_tab();
+        Ok(())
     }
 
     fn open_selected(&mut self) -> Result<()> {
@@ -677,5 +755,15 @@ fn workspace_pane_from_focus(focus: FocusArea) -> WorkspacePane {
         FocusArea::HomeStats => WorkspacePane::Stats,
         FocusArea::HomeAdvancements => WorkspacePane::Advancements,
         _ => WorkspacePane::Players,
+    }
+}
+
+fn tab_document_id(kind: &TabKind) -> crate::app::tab_id::DocumentId {
+    match kind {
+        TabKind::Home(id)
+        | TabKind::Player(id)
+        | TabKind::Nbt(id)
+        | TabKind::Stats(id)
+        | TabKind::Advancements(id) => *id,
     }
 }

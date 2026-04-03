@@ -17,6 +17,10 @@ pub fn action_from_key(key: KeyEvent, editing: bool) -> Action {
         return Action::RequestQuit;
     }
 
+    if key.modifiers.contains(KeyModifiers::CONTROL) && matches!(key.code, KeyCode::Char('w')) {
+        return Action::CloseActiveTab;
+    }
+
     match key.code {
         KeyCode::Char('q') => Action::RequestQuit,
         KeyCode::Char('s') => Action::SaveActive,

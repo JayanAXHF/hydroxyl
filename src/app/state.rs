@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 use crate::{
     app::{
         action::EditTarget, context::AppContext, document::Document, message::Message,
-        tab::TabState,
+        tab::TabState, tab_id::DocumentId,
     },
     util::fs::file_name,
 };
@@ -28,10 +28,17 @@ pub struct InputState {
     pub target: EditTarget,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum ConfirmAction {
+    Quit,
+    CloseTab(DocumentId),
+}
+
 #[derive(Debug, Clone)]
 pub struct ConfirmState {
     pub title: String,
     pub message: String,
+    pub action: ConfirmAction,
 }
 
 #[derive(Debug, Clone)]

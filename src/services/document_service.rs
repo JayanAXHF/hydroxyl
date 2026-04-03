@@ -148,6 +148,10 @@ impl DocumentService {
         (document, tab)
     }
 
+    pub fn create_home_tab(&mut self) -> (Document, TabState) {
+        self.blank_home_tab()
+    }
+
     fn blank_home_tab(&mut self) -> (Document, TabState) {
         let id = self.next_document_id();
         let title = "Home".to_owned();
