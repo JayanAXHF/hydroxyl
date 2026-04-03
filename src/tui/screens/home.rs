@@ -53,11 +53,11 @@ pub fn render(frame: &mut Frame, area: Rect, state: &AppState, document: &Worksp
     let info = if total_entries == 0 {
         vec![
             Line::raw(
-                "Open a server root with --world to browse playerdata, stats, and advancements.",
+                "Open a server root with `hc world <path>` to browse playerdata, stats, and advancements.",
             ),
             Line::raw(""),
             Line::raw(
-                "You can also open standalone files directly with --player, --nbt, --stats, or --advancements.",
+                "You can also open standalone files with `hc player`, `hc nbt`, `hc stats`, or `hc advancements`.",
             ),
         ]
     } else {

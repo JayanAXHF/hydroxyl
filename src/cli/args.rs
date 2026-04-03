@@ -1,31 +1,39 @@
 use std::path::PathBuf;
 
-use clap::Parser;
+use clap::{Parser, Subcommand};
 
 #[derive(Debug, Parser, Clone)]
-#[command(
-    name = "hydroxyl",
-    author,
-    version,
-    about = "Minecraft server files manager"
-)]
+#[command(name = "hc", author, version, about = "Minecraft server files manager")]
 pub struct Cli {
-    #[arg(
-        long,
-        value_name = "PATH",
-        help = "Open a server root or world directory"
-    )]
-    pub world: Option<PathBuf>,
-    #[arg(long, value_name = "PATH", help = "Open a single player .dat file")]
-    pub player: Option<PathBuf>,
-    #[arg(long, value_name = "PATH", help = "Open a standalone NBT file")]
-    pub nbt: Option<PathBuf>,
-    #[arg(long, value_name = "PATH", help = "Open a standalone stats JSON file")]
-    pub stats: Option<PathBuf>,
-    #[arg(
-        long,
-        value_name = "PATH",
-        help = "Open a standalone advancements JSON file"
-    )]
-    pub advancements: Option<PathBuf>,
+    #[command(subcommand)]
+    pub command: Option<CliCommand>,
+}
+
+#[derive(Debug, Subcommand, Clone)]
+pub enum CliCommand {
+    #[command(about = "Open a server root or world directory")]
+    World {
+        #[arg(value_name = "PATH")]
+        path: PathBuf,
+    },
+    #[command(about = "Open a single player .dat file")]
+    Player {
+        #[arg(value_name = "PATH")]
+        path: PathBuf,
+    },
+    #[command(about = "Open a standalone NBT file")]
+    Nbt {
+        #[arg(value_name = "PATH")]
+        path: PathBuf,
+    },
+    #[command(about = "Open a standalone stats JSON file")]
+    Stats {
+        #[arg(value_name = "PATH")]
+        path: PathBuf,
+    },
+    #[command(about = "Open a standalone advancements JSON file")]
+    Advancements {
+        #[arg(value_name = "PATH")]
+        path: PathBuf,
+    },
 }
