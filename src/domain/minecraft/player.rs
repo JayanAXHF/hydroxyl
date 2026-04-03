@@ -89,8 +89,9 @@ fn parse_inventory(root: &NbtValue) -> InventoryModel {
     let mut model = InventoryModel::default();
 
     if let Some(items) = compound_get(root, "Inventory").and_then(as_list) {
-        model.slots = items.iter().filter_map(parse_item_stack).collect();
-        model.slots.sort_by_key(|item| item.slot);
+        for item in items.iter().filter_map(parse_item_stack) {
+            model.place(item);
+        }
     }
 
     model

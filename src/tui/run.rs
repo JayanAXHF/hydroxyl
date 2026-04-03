@@ -266,11 +266,7 @@ impl Runtime {
                     delta,
                     crate::domain::minecraft::player::PlayerSection::ALL.len(),
                 ),
-                FocusArea::PlayerInventory => offset_index(
-                    &mut document.data.inventory.selected_index,
-                    delta * 9,
-                    document.data.inventory.slots.len(),
-                ),
+                FocusArea::PlayerInventory => document.data.inventory.move_vertical(delta),
                 FocusArea::PlayerFields => {
                     let len = screens::player::property_rows(document).len();
                     offset_index(&mut document.data.field_selected, delta, len)
@@ -307,11 +303,7 @@ impl Runtime {
                 self.state.focus = focus_for_workspace_pane(next);
             }
             Some(Document::Player(document)) => match focus {
-                FocusArea::PlayerInventory => offset_index(
-                    &mut document.data.inventory.selected_index,
-                    delta,
-                    document.data.inventory.slots.len(),
-                ),
+                FocusArea::PlayerInventory => document.data.inventory.move_horizontal(delta),
                 FocusArea::PlayerSections => offset_index(
                     &mut document.data.selected_section,
                     delta,

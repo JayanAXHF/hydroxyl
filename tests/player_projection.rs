@@ -51,11 +51,29 @@ fn player_service_projects_inventory_and_core_fields() {
     );
     root.insert(
         "Inventory".to_owned(),
-        Value::List(vec![Value::Compound(HashMap::from([
-            ("Slot".to_owned(), Value::Byte(0)),
-            ("id".to_owned(), Value::String("minecraft:stone".to_owned())),
-            ("Count".to_owned(), Value::Byte(32)),
-        ]))]),
+        Value::List(vec![
+            Value::Compound(HashMap::from([
+                ("Slot".to_owned(), Value::Byte(0)),
+                ("id".to_owned(), Value::String("minecraft:stone".to_owned())),
+                ("Count".to_owned(), Value::Byte(32)),
+            ])),
+            Value::Compound(HashMap::from([
+                ("Slot".to_owned(), Value::Byte(103)),
+                (
+                    "id".to_owned(),
+                    Value::String("minecraft:diamond_helmet".to_owned()),
+                ),
+                ("Count".to_owned(), Value::Byte(1)),
+            ])),
+            Value::Compound(HashMap::from([
+                ("Slot".to_owned(), Value::Byte(-106)),
+                (
+                    "id".to_owned(),
+                    Value::String("minecraft:totem_of_undying".to_owned()),
+                ),
+                ("Count".to_owned(), Value::Byte(1)),
+            ])),
+        ]),
     );
 
     nbt_codec::write_file(&path, &Value::Compound(root), CompressionKind::Gzip).unwrap();
@@ -68,8 +86,34 @@ fn player_service_projects_inventory_and_core_fields() {
     assert_eq!(document.data.attributes.food_level, 14);
     assert_eq!(document.data.position.dimension, "minecraft:the_nether");
     assert!(document.data.abilities.flying);
-    assert_eq!(document.data.inventory.slots.len(), 1);
-    assert_eq!(document.data.inventory.slots[0].item_id, "minecraft:stone");
+    assert_eq!(document.data.inventory.occupied_count(), 3);
+    assert_eq!(
+        document.data.inventory.main[27]
+            .item
+            .as_ref()
+            .unwrap()
+            .item_id,
+        "minecraft:stone"
+    );
+    assert_eq!(
+        document.data.inventory.armor[0]
+            .item
+            .as_ref()
+            .unwrap()
+            .item_id,
+        "minecraft:diamond_helmet"
+    );
+    assert_eq!(
+        document
+            .data
+            .inventory
+            .offhand
+            .item
+            .as_ref()
+            .unwrap()
+            .item_id,
+        "minecraft:totem_of_undying"
+    );
     assert_eq!(
         document.data.identity.uuid.unwrap().to_string(),
         "123e4567-e89b-12d3-a456-426614174000"

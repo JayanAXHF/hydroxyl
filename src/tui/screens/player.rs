@@ -18,6 +18,28 @@ use crate::{
 };
 
 pub fn render(frame: &mut Frame, area: Rect, state: &AppState, document: &PlayerDocument) {
+    let sections = PlayerSection::ALL
+        .iter()
+        .map(|section| section.title().to_owned())
+        .collect::<Vec<_>>();
+
+    if document.data.active_section() == PlayerSection::Inventory {
+        let columns = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Length(22), Constraint::Min(0)])
+            .split(area);
+        section_list::render(
+            frame,
+            columns[0],
+            "Sections",
+            &sections,
+            document.data.selected_section,
+            state.focus == FocusArea::PlayerSections,
+        );
+        render_inventory_view(frame, columns[1], state, document);
+        return;
+    }
+
     let columns = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
@@ -27,10 +49,6 @@ pub fn render(frame: &mut Frame, area: Rect, state: &AppState, document: &Player
         ])
         .split(area);
 
-    let sections = PlayerSection::ALL
-        .iter()
-        .map(|section| section.title().to_owned())
-        .collect::<Vec<_>>();
     section_list::render(
         frame,
         columns[0],
@@ -41,9 +59,6 @@ pub fn render(frame: &mut Frame, area: Rect, state: &AppState, document: &Player
     );
 
     match document.data.active_section() {
-        PlayerSection::Inventory => {
-            render_inventory_view(frame, columns[1], columns[2], state, document)
-        }
         PlayerSection::RawNbt => render_raw_view(frame, columns[1], columns[2], state, document),
         PlayerSection::Overview
         | PlayerSection::Attributes
@@ -51,42 +66,51 @@ pub fn render(frame: &mut Frame, area: Rect, state: &AppState, document: &Player
         | PlayerSection::Abilities => {
             render_structured_view(frame, columns[1], columns[2], state, document)
         }
+        PlayerSection::Inventory => {}
     }
 }
 
 fn render_inventory_view(
     frame: &mut Frame,
-    left: Rect,
-    right: Rect,
+    area: Rect,
     state: &AppState,
     document: &PlayerDocument,
 ) {
+    let rows = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Min(15), Constraint::Length(8)])
+        .split(area);
+
+    let top = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Min(0), Constraint::Length(24)])
+        .split(rows[0]);
+
+    let sidebar = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Length(15), Constraint::Min(0)])
+        .split(top[1]);
+
     inventory_grid::render(
         frame,
-        left,
-        &document.data.inventory.slots,
-        document.data.inventory.selected_index,
+        top[0],
+        &document.data.inventory,
         state.focus == FocusArea::PlayerInventory,
     );
 
-    let right_chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(15),
-            Constraint::Length(10),
-            Constraint::Min(8),
-        ])
-        .split(right);
-
     avatar_panel::render(
         frame,
-        right_chunks[0],
+        sidebar[0],
         &document.skin_state,
         document.data.identity.name.as_deref(),
         document.data.identity.uuid.map(|uuid| uuid.to_string()),
     );
-    item_details::render(frame, right_chunks[1], document.data.inventory.selected());
-    stats_panel::render(frame, right_chunks[2], &document.data.attributes);
+    stats_panel::render(frame, sidebar[1], &document.data.attributes);
+    item_details::render(
+        frame,
+        rows[1],
+        Some(document.data.inventory.selected_cell()),
+    );
 }
 
 fn render_structured_view(
@@ -165,7 +189,7 @@ pub fn property_rows(document: &PlayerDocument) -> Vec<PropertyRow> {
             },
             PropertyRow {
                 label: "Item Count".to_owned(),
-                value: document.data.inventory.slots.len().to_string(),
+                value: document.data.inventory.occupied_count().to_string(),
             },
         ],
         PlayerSection::Attributes => vec![
@@ -264,7 +288,7 @@ pub fn edit_target(
 ) -> Option<(String, String, EditTarget)> {
     match (document.data.active_section(), focus) {
         (PlayerSection::Inventory, FocusArea::PlayerInventory) => {
-            let selected = document.data.inventory.selected()?;
+            let selected = document.data.inventory.selected_item()?;
             Some((
                 format!("Edit count for {}", selected.item_id),
                 selected.count.to_string(),

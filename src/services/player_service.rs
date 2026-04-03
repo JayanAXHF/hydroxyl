@@ -53,15 +53,14 @@ impl PlayerService {
         let preserved_server = document.server.clone();
         let preserved_section = document.data.selected_section;
         let preserved_field = document.data.field_selected;
-        let preserved_inventory = document.data.inventory.selected_index;
+        let preserved_inventory = document.data.inventory.selection;
         let preserved_raw = document.data.raw_selected;
 
         document.data = PlayerData::from_root(&document.meta.path, &document.root);
         document.data.selected_section =
             preserved_section.min(crate::domain::minecraft::player::PlayerSection::ALL.len() - 1);
         document.data.field_selected = preserved_field;
-        document.data.inventory.selected_index =
-            preserved_inventory.min(document.data.inventory.slots.len().saturating_sub(1));
+        document.data.inventory.selection = preserved_inventory;
         document.data.raw_selected =
             preserved_raw.min(document.data.raw_entries.len().saturating_sub(1));
         document.data.raw_entries = flatten(&document.root);
@@ -153,7 +152,7 @@ impl PlayerService {
     }
 
     fn edit_inventory_count(&self, document: &mut PlayerDocument, input: &str) -> Result<()> {
-        let Some(selected) = document.data.inventory.selected() else {
+        let Some(selected) = document.data.inventory.selected_item() else {
             return Ok(());
         };
         if let Some(slot) = find_inventory_slot_mut(&mut document.root, selected.slot) {
@@ -163,7 +162,7 @@ impl PlayerService {
     }
 
     fn edit_inventory_id(&self, document: &mut PlayerDocument, input: &str) -> Result<()> {
-        let Some(selected) = document.data.inventory.selected() else {
+        let Some(selected) = document.data.inventory.selected_item() else {
             return Ok(());
         };
         if let Some(slot) = find_inventory_slot_mut(&mut document.root, selected.slot) {
