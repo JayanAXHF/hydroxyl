@@ -2,7 +2,7 @@ use std::path::Path;
 
 use crate::{
     app::{
-        context::OpenTarget,
+        context::{OpenTarget, WorldFileStructure},
         document::{Document, DocumentKind, DocumentMeta, WorkspaceDocument},
         tab::{TabKind, TabState},
         tab_id::{DocumentId, TabId},
@@ -43,25 +43,32 @@ impl DocumentService {
         &mut self,
         services: &AppServices,
         target: &OpenTarget,
+        structure: WorldFileStructure,
     ) -> Result<Vec<(Document, TabState)>> {
         match target {
             OpenTarget::Home => Ok(vec![self.blank_home_tab()]),
             OpenTarget::World(path) => {
-                let server = services.workspace.load(path)?;
+                let server = services.workspace.load(path, structure)?;
                 let document = self.workspace_document(path, server, true);
                 Ok(vec![document])
             }
             OpenTarget::Player(path) => {
                 let server = infer_server_root(path)
-                    .or_else(|| infer_world_root(path))
-                    .map(|root| services.workspace.load(&root))
+                    .or_else(|| infer_world_root(path, structure))
+                    .map(|root| services.workspace.load(&root, structure))
                     .transpose()?;
-                let document =
-                    self.open_path(services, path, DocumentSource::Direct, server.as_ref())?;
+                let document = self.open_path(
+                    services,
+                    path,
+                    DocumentSource::Direct,
+                    server.as_ref(),
+                    structure,
+                )?;
                 Ok(vec![document])
             }
             OpenTarget::Nbt(path) | OpenTarget::Stats(path) | OpenTarget::Advancements(path) => {
-                let document = self.open_path(services, path, DocumentSource::Direct, None)?;
+                let document =
+                    self.open_path(services, path, DocumentSource::Direct, None, structure)?;
                 Ok(vec![document])
             }
         }
@@ -73,12 +80,13 @@ impl DocumentService {
         path: &Path,
         source: DocumentSource,
         server: Option<&ServerContext>,
+        structure: WorldFileStructure,
     ) -> Result<(Document, TabState)> {
-        let kind = detect_file_kind(path);
+        let kind = detect_file_kind(path, structure);
         let id = self.next_document_id();
         let (document, tab_kind) = match kind {
             FileKind::Workspace => {
-                let server = services.workspace.load(path)?;
+                let server = services.workspace.load(path, structure)?;
                 let (document, tab) = self.workspace_document(path, server, false);
                 return Ok((document, tab));
             }

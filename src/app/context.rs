@@ -1,5 +1,17 @@
 use std::path::PathBuf;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum WorldFileStructure {
+    Legacy,
+    New,
+}
+
+impl Default for WorldFileStructure {
+    fn default() -> Self {
+        Self::Legacy
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum OpenTarget {
     Home,
@@ -13,12 +25,14 @@ pub enum OpenTarget {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LaunchConfig {
     pub target: OpenTarget,
+    pub world_file_structure: WorldFileStructure,
 }
 
 impl Default for LaunchConfig {
     fn default() -> Self {
         Self {
             target: OpenTarget::Home,
+            world_file_structure: WorldFileStructure::Legacy,
         }
     }
 }

@@ -54,9 +54,11 @@ pub fn run(launch: LaunchConfig) -> Result<()> {
         documents,
     };
 
-    let initial = runtime
-        .documents
-        .open_initial(&runtime.services, &context.launch_config.target)?;
+    let initial = runtime.documents.open_initial(
+        &runtime.services,
+        &context.launch_config.target,
+        context.launch_config.world_file_structure,
+    )?;
     for (document, tab) in initial {
         runtime.add_document(document, tab);
     }
@@ -582,9 +584,10 @@ impl Runtime {
             root: document.server.root.clone(),
         };
         let server = Some(&document.server);
+        let structure = self.state.context.launch_config.world_file_structure;
         let (document, tab) =
             self.documents
-                .open_path(&self.services, &entry.path, source, server)?;
+                .open_path(&self.services, &entry.path, source, server, structure)?;
         self.add_document(document, tab);
         Ok(())
     }

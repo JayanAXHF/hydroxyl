@@ -5,6 +5,9 @@ use clap::{Parser, Subcommand};
 #[derive(Debug, Parser, Clone)]
 #[command(name = "hc", author, version, about = "Minecraft server files manager")]
 pub struct Cli {
+    #[arg(long, global = true)]
+    pub new_file_structure: bool,
+
     #[command(subcommand)]
     pub command: Option<CliCommand>,
 }

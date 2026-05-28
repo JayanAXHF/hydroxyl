@@ -4,6 +4,7 @@ use std::{
 };
 
 use crate::{
+    app::context::WorldFileStructure,
     domain::{
         files::{
             detect::{is_server_root, is_world_root},
@@ -18,7 +19,7 @@ use crate::{
 pub struct WorkspaceService;
 
 impl WorkspaceService {
-    pub fn load(&self, path: &Path) -> Result<ServerContext> {
+    pub fn load(&self, path: &Path, structure: WorldFileStructure) -> Result<ServerContext> {
         let (root, world_path, properties) = if is_server_root(path) {
             let properties = parse_properties(&path.join("server.properties"))?;
             let level_name = properties
@@ -27,7 +28,7 @@ impl WorkspaceService {
                 .unwrap_or_else(|| "world".to_owned());
             let world_path = path.join(&level_name);
             (path.to_path_buf(), world_path, properties)
-        } else if is_world_root(path) {
+        } else if is_world_root(path, structure) {
             (path.to_path_buf(), path.to_path_buf(), Default::default())
         } else {
             return Err(HydroxylError::invalid_data(format!(
@@ -46,9 +47,9 @@ impl WorkspaceService {
             .map(|value| value.eq_ignore_ascii_case("true"))
             .unwrap_or(false);
 
-        let player_files = list_files(&world_path.join("playerdata"), "dat")?;
-        let stats_files = list_files(&world_path.join("stats"), "json")?;
-        let advancements_files = list_files(&world_path.join("advancements"), "json")?;
+        let player_files = list_files(&player_data_path(&world_path, structure), "dat")?;
+        let stats_files = list_files(&stats_path(&world_path, structure), "json")?;
+        let advancements_files = list_files(&advancements_path(&world_path, structure), "json")?;
 
         let player_entries = player_files
             .iter()
@@ -93,6 +94,27 @@ impl WorkspaceService {
             stats_entries,
             advancements_entries,
         })
+    }
+}
+
+fn player_data_path(world_path: &Path, structure: WorldFileStructure) -> PathBuf {
+    match structure {
+        WorldFileStructure::Legacy => world_path.join("playerdata"),
+        WorldFileStructure::New => world_path.join("players").join("data"),
+    }
+}
+
+fn stats_path(world_path: &Path, structure: WorldFileStructure) -> PathBuf {
+    match structure {
+        WorldFileStructure::Legacy => world_path.join("stats"),
+        WorldFileStructure::New => world_path.join("players").join("stats"),
+    }
+}
+
+fn advancements_path(world_path: &Path, structure: WorldFileStructure) -> PathBuf {
+    match structure {
+        WorldFileStructure::Legacy => world_path.join("advancements"),
+        WorldFileStructure::New => world_path.join("players").join("advancements"),
     }
 }
 
